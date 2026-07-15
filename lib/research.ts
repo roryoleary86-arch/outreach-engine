@@ -13,6 +13,11 @@ export interface ResearchResult {
   /** "direct" = published personal address; "general" = only a shared inbox (info@ etc.); "none" = nothing published */
   email_type: EmailType;
   email_source_url: string | null;
+  /** A published phone number for the firm or contact — captured for phone-first outreach. */
+  phone: string | null;
+  phone_source_url: string | null;
+  /** A shared inbox (info@, hello@) when no direct address exists. */
+  general_inbox: string | null;
   facts: Fact[];
   notes: string | null;
 }
@@ -29,6 +34,14 @@ export function extractJson<T>(text: string): T {
     throw new Error("No JSON object found in model output.");
   }
   return JSON.parse(text.slice(start, end + 1)) as T;
+}
+
+function optString(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+function optUrl(v: unknown): string | null {
+  return typeof v === "string" && /^https?:\/\//.test(v) ? v : null;
 }
 
 export function validateResearch(raw: unknown): ResearchResult {
@@ -56,18 +69,15 @@ export function validateResearch(raw: unknown): ResearchResult {
 
   return {
     firm_name: r.firm_name,
-    contact_name: typeof r.contact_name === "string" ? r.contact_name : null,
-    contact_role: typeof r.contact_role === "string" ? r.contact_role : null,
-    contact_email:
-      emailType !== "none" && typeof r.contact_email === "string"
-        ? r.contact_email
-        : null,
+    contact_name: optString(r.contact_name),
+    contact_role: optString(r.contact_role),
+    contact_email: emailType !== "none" ? optString(r.contact_email) : null,
     email_type: emailType,
-    email_source_url:
-      typeof r.email_source_url === "string" && /^https?:\/\//.test(r.email_source_url)
-        ? r.email_source_url
-        : null,
+    email_source_url: optUrl(r.email_source_url),
+    phone: optString(r.phone),
+    phone_source_url: optUrl(r.phone_source_url),
+    general_inbox: optString(r.general_inbox),
     facts,
-    notes: typeof r.notes === "string" ? r.notes : null,
+    notes: optString(r.notes),
   };
 }
