@@ -47,9 +47,36 @@ export default function BatchPage() {
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const looksBinary =
+      file.type === "application/pdf" ||
+      /\.(pdf|docx?|xlsx?)$/i.test(file.name);
+    if (looksBinary) {
+      setError(
+        `"${file.name}" looks like a PDF or Word/Excel file, which can't be read as plain text. Open it, select all the text, copy it, and paste it into the box below instead — or upload a genuine .csv/.txt file here.`,
+      );
+      e.target.value = "";
+      return;
+    }
+
     setSourceType("csv");
     const reader = new FileReader();
-    reader.onload = () => setInput(String(reader.result ?? ""));
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      // Heuristic: a real CSV/text file is almost all printable characters.
+      // A binary file misread as text is dominated by control/replacement
+      // characters — catch that before it ever reaches the parse API.
+      const sample = text.slice(0, 2000);
+      const badChars = sample.replace(/[\x09\x0A\x0D\x20-\x7E]/g, "").length;
+      if (sample.length > 0 && badChars / sample.length > 0.1) {
+        setError(
+          `"${file.name}" doesn't look like plain text (it may be a PDF or other binary file). Open it, copy the text, and paste it into the box below instead.`,
+        );
+        return;
+      }
+      setError(null);
+      setInput(text);
+    };
     reader.readAsText(file);
   }
 

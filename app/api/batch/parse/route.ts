@@ -19,6 +19,27 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Reject binary content (e.g. a PDF/Word file misread as text) before it
+  // ever reaches the model. Real text — including accented names — has
+  // almost no control characters or Unicode replacement characters; binary
+  // misread as text is dominated by them.
+  const sample = input.slice(0, 5000);
+  let badChars = 0;
+  for (let i = 0; i < sample.length; i++) {
+    const code = sample.charCodeAt(i);
+    const isControl = code < 32 && code !== 9 && code !== 10 && code !== 13;
+    if (isControl || code === 127 || code === 0xfffd) badChars++;
+  }
+  if (badChars / sample.length > 0.1) {
+    return NextResponse.json(
+      {
+        error:
+          "This doesn't look like plain text — it may be a PDF or other binary file read incorrectly. Open the file, copy the text, and paste it in instead.",
+      },
+      { status: 400 },
+    );
+  }
+
   try {
     const records = await parseRegister(getClient(), input);
 
