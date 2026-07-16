@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getClient, parseRegister, RefusalError } from "@/lib/runners";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseHost } from "@/lib/supabase";
 import { normalizeFirmName, type ParsedFirm } from "@/lib/firm";
 
 export const runtime = "nodejs";
@@ -47,7 +47,11 @@ export async function POST(req: NextRequest) {
     const { data: existing, error } = await supabase()
       .from("firms")
       .select("firm_name");
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(
+        `Supabase query failed against ${supabaseHost()}: ${error.message}`,
+      );
+    }
 
     const seen = new Set(
       (existing ?? []).map((r: { firm_name: string }) => normalizeFirmName(r.firm_name)),
