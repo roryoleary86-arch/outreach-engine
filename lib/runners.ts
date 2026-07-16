@@ -19,7 +19,21 @@ export class RefusalError extends Error {
 }
 
 export function getClient(): Anthropic {
-  return new Anthropic();
+  const key = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!key) {
+    throw new Error(
+      "ANTHROPIC_API_KEY is not set. Add it in Vercel → Settings → Environment Variables, then redeploy.",
+    );
+  }
+  // Catch the classic mistake of pasting a *masked* key display
+  // (sk-ant-a•••••…) instead of the real key — bullets and any other
+  // non-ASCII character can't be sent in an HTTP header.
+  if (/[^\x21-\x7e]/.test(key)) {
+    throw new Error(
+      "ANTHROPIC_API_KEY contains invalid characters (it looks like the masked '•••' display was pasted instead of the real key). Copy the actual key — it should be ~108 plain characters ending in 'AA' with no dots — and re-save it in Vercel, then redeploy.",
+    );
+  }
+  return new Anthropic({ apiKey: key });
 }
 
 const WEB_TOOLS = [
