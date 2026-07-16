@@ -223,6 +223,7 @@ export default function BatchPage() {
             onChange={(e) => {
               setInput(e.target.value);
               setSourceType("text");
+              setError(null);
             }}
             placeholder="Paste rows copied from a PDF register or a CSV…"
             style={{ minHeight: 200 }}
